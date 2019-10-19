@@ -16,10 +16,10 @@ local vct = vector
 local SAIL_ROT_RATE = 2	
 local WIND_FACTOR = 0.05
 local RUDDER_LIMIT = 30	-- degrees
-local RUDDER_TURN_RATE = rad(0.5)
+local RUDDER_TURN_RATE = rad(5)
 local LONGIT_DRAG_FACTOR = 0.13*0.13
 local LATER_DRAG_FACTOR = 2.0
-local ROLL_RATE = rad(5)
+local ROLL_RATE = rad(2)
 local ROLL_FACTOR=0.1
 
 local modpath = minetest.get_modpath('sailing_kit')
@@ -32,6 +32,10 @@ end
 
 local function sign(n)
 	return n>=0 and 1 or -1
+end
+
+local function minmax(v,m)
+	return min(abs(v),m)*sign(v)
 end
 
 local function get_wind()
@@ -49,10 +53,10 @@ local boat_activation = function(self,std)
 --	local seat=minetest.add_entity(pos,'sailing_kit:seat')
 	local sail=minetest.add_entity(pos,'sailing_kit:sail')
 	local rudder=minetest.add_entity(pos,'sailing_kit:rudder')
-	mast:set_attach(self.object,'',{x=0,y=8,z=0},{x=0,y=0,z=0})
+	mast:set_attach(self.object,'',{x=0,y=8,z=4},{x=0,y=0,z=0})
 --	seat:set_attach(self.object,'',{x=-3,y=2,z=-24},{x=0,y=0,z=0})
 	sail:set_attach(mast,'',{x=0,y=0,z=0},{x=0,y=0,z=0})
-	rudder:set_attach(self.object,'',{x=0,y=0,z=-30},{x=0,y=0,z=0})
+	rudder:set_attach(self.object,'',{x=0,y=0,z=-26},{x=0,y=0,z=0})
 	self.mast = mast
 --	self.seat = seat
 	self.sail = sail
@@ -69,6 +73,8 @@ local sailstep = function(self)
 		local vel = self.object:get_velocity()
 		wind = {x=wind.x - vel.x,y=0,z=wind.z-vel.z}
 		local rotation = self.object:get_rotation()
+		local pitch = rotation.x
+		local newpitch = pitch
 		local yaw = rotation.y
 		local newyaw=yaw
 		local roll = rotation.z
@@ -98,9 +104,9 @@ local sailstep = function(self)
 					end
 				else	-- paddle
 					local paddleacc
-					if longit_speed < 0.5 and ctrl.up then
+					if longit_speed < 1.0 and ctrl.up then
 						paddleacc = 0.5
-					elseif longit_speed >  -0.5 and ctrl.down then
+					elseif longit_speed >  -1.0 and ctrl.down then
 						paddleacc = -0.5
 					end
 					if paddleacc then accel=vct.add(accel,vct.multiply(hdir,paddleacc)) end
@@ -128,9 +134,12 @@ local sailstep = function(self)
 		-- move rudder
 		if rudder_angle ~= self.rudder_angle then
 			self.rudder_angle = rudder_angle
-			self.rudder:set_attach(self.object,'',{x=0,y=0,z=-30},{x=0,y=self.rudder_angle,z=0})
+			self.rudder:set_attach(self.object,'',{x=0,y=0,z=-26},{x=0,y=self.rudder_angle,z=0})
 		end
-		if abs(self.rudder_angle)>5 then newyaw = yaw+dtime*RUDDER_TURN_RATE*longit_speed*self.rudder_angle/30 end
+		if abs(self.rudder_angle)>5 then 
+--			newyaw = yaw+dtime*RUDDER_TURN_RATE*longit_speed*self.rudder_angle/30 
+			newyaw = yaw+dtime*(1-1/(longit_speed*0.5+1))*self.rudder_angle/30*RUDDER_TURN_RATE
+		end
 		
 		if self.sail_set then
 			-- get sail direction
@@ -165,11 +174,16 @@ local sailstep = function(self)
 			newroll=0
 		end
 		
-		if abs(newroll-roll)>ROLL_RATE*dtime then newroll=roll+ROLL_RATE*dtime*sign(newroll-roll) end
-		if newroll~=roll or newyaw~=yaw then self.object:set_rotation({x=0,y=newyaw,z=newroll}) end
+		local bob = minmax(dot(accel,hdir),1)	-- vertical bobbing
 		
-		accel.y = accel_y
-		self.object:set_acceleration(accel)
+		if self.isinliquid then
+			accel.y = accel_y+bob
+			newpitch = vel.y * rad(6)
+			self.object:set_acceleration(accel)
+		end
+		
+		if abs(newroll-roll)>ROLL_RATE*dtime then newroll=roll+ROLL_RATE*dtime*sign(newroll-roll) end
+		if newroll~=roll or newyaw~=yaw or newpitch~=pitch then self.object:set_rotation({x=newpitch,y=newyaw,z=newroll}) end
 		
 		-- workaround for broken attachments
 		if random()>0.95 then self.sail:set_attach(self.mast,'',{x=0,y=0,z=0},{x=0,y=0,z=0}) end
@@ -192,12 +206,12 @@ minetest.register_entity('sailing_kit:boat',{
 	textures = {"default_wood.png"},
 	
 	water_drag = 0,		-- handled by object's own logic.
-	buoyancy = 0.5,
+	buoyancy = 0.45,
 
 on_rightclick=function(self, clicker)
 	if clicker:get_attach() == nil then
 --		clicker:set_attach(self.object,'',{x=20,y=3,z=0},{x=0,y=0,z=0})
-		clicker:set_attach(self.object,'',{x=-3,y=2,z=-24},{x=0,y=0,z=0})
+		clicker:set_attach(self.object,'',{x=-3,y=2,z=-21},{x=0,y=0,z=0})
 		clicker:set_eye_offset({x=0,y=0,z=-20},{x=0,y=0,z=-20})
 		player_api.player_attached[clicker:get_player_name()] = true
 		minetest.after(0.2, function()
