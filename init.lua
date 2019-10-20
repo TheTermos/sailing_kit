@@ -102,7 +102,6 @@ local sailstep = function(self)
 					if ctrl.up then
 						self.sheet_limit = min(self.sheet_limit+7*dtime,90)
 					elseif ctrl.down then
-						minetest.chat_send_all('sailrot:'.. sailrot.y)
 --						self.sheet_limit = max(self.sheet_limit-7*dtime,0)
 						self.sheet_limit = max(abs(sailrot.y)-7*dtime,0)
 					end
