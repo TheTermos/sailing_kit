@@ -90,6 +90,8 @@ local sailstep = function(self)
 		local accel = vct.add(longit_drag,later_drag)
 		local rudder_angle = self.rudder_angle
 		
+		local _,_,spos,sailrot = self.mast:get_attach()
+		
 		-- player control
 		if self.driver then
 			plyr = minetest.get_player_by_name(self.driver)
@@ -100,7 +102,9 @@ local sailstep = function(self)
 					if ctrl.up then
 						self.sheet_limit = min(self.sheet_limit+7*dtime,90)
 					elseif ctrl.down then
-						self.sheet_limit = max(self.sheet_limit-7*dtime,0)
+						minetest.chat_send_all('sailrot:'.. sailrot.y)
+--						self.sheet_limit = max(self.sheet_limit-7*dtime,0)
+						self.sheet_limit = max(abs(sailrot.y)-7*dtime,0)
 					end
 				else	-- paddle
 					local paddleacc
@@ -143,7 +147,7 @@ local sailstep = function(self)
 		
 		if self.sail_set then
 			-- get sail direction
-			local _,_,spos,sailrot = self.mast:get_attach()
+--			local _,_,spos,sailrot = self.mast:get_attach()
 			local syaw = yaw - rad(sailrot.y)
 			local sdir = minetest.yaw_to_dir(syaw)
 			local snormal = {x=sdir.z,y=0,z=-sdir.x}	-- rightside, dot is negative
@@ -201,6 +205,7 @@ minetest.register_entity('sailing_kit:boat',{
 
 	physical = true,
 	collisionbox = {-0.6, -0.8, -0.6, 0.6, 0.9, 0.6},
+	makes_footstep_sound = true,
 	visual = "mesh",
 	mesh = "sailboat_hull.obj",
 	textures = {"default_wood.png"},
