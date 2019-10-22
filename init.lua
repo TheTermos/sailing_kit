@@ -50,15 +50,16 @@ local boat_activation = function(self,std)
 	self.rudder_angle = 0
 	local pos = self.object:get_pos()
 	local mast=minetest.add_entity(pos,'sailing_kit:mast')
---	local seat=minetest.add_entity(pos,'sailing_kit:seat')
 	local sail=minetest.add_entity(pos,'sailing_kit:sail')
+	local sailcolor = mobkit.recall(self,'sailcolor')
+	if sailcolor then
+		sail:set_properties({textures={"sail.png^[multiply:".. sailcolor}})
+	end
 	local rudder=minetest.add_entity(pos,'sailing_kit:rudder')
 	mast:set_attach(self.object,'',{x=0,y=8,z=4},{x=0,y=0,z=0})
---	seat:set_attach(self.object,'',{x=-3,y=2,z=-24},{x=0,y=0,z=0})
 	sail:set_attach(mast,'',{x=0,y=0,z=0},{x=0,y=0,z=0})
 	rudder:set_attach(self.object,'',{x=0,y=0,z=-26},{x=0,y=0,z=0})
 	self.mast = mast
---	self.seat = seat
 	self.sail = sail
 	self.rudder = rudder
 	self.sail_set = false
@@ -193,6 +194,45 @@ local sailstep = function(self)
 	end
 end
 
+local colors ={
+black='#4C4C4C',
+blue='#99CEFF',
+brown='#D5B695',
+cyan='#B2FFFF',
+dark_green='#7FB263',
+dark_grey='#999999',
+green='#B3FFB2',
+grey='#CCCCCC',
+magenta='#FFB2E0',
+orange='#FFDD99',
+pink='#FFD8D8',
+red='#FFB2B2',
+violet='#DCB2FF',
+white='#FFFFFF',
+yellow='#FFFF80',
+}
+
+local paint_sail=function(self,puncher)
+	if puncher:is_player() then
+		local itmstck=puncher:get_wielded_item()
+		if itmstck then
+			local name=itmstck:get_name()
+			local _,indx = name:find('dye:')
+			if indx then
+				local color = name:sub(indx+1)
+				local colstr = colors[color]
+-- minetest.chat_send_all(color ..' '.. dump(colstr))
+				if colstr then
+					self.sail:set_properties({textures={"sail.png^[multiply:".. colstr}})
+					mobkit.remember(self,'sailcolor',colstr)
+					itmstck:set_count(itmstck:get_count()-1)
+					puncher:set_wielded_item(itmstck)
+				end
+			end	
+		end
+	end
+end
+
 minetest.register_entity('sailing_kit:boat',{
 --[[ initial_properties = {
 	physical = true,
@@ -224,6 +264,7 @@ on_rightclick=function(self, clicker)
 		self.driver = clicker:get_player_name()
 	else
 		clicker:set_detach()
+		player_api.player_attached[clicker:get_player_name()] = false
 		clicker:set_eye_offset({x=0,y=0,z=0},{x=0,y=0,z=0})
 		player_api.set_animation(clicker, "stand" , 30)
 		self.driver = nil
@@ -237,6 +278,10 @@ on_activate=function(self,std)
 	mobkit.actfunc(self,std)
 	boat_activation(self,std)
 end,
+
+get_staticdata = mobkit.statfunc,
+
+on_punch = paint_sail,
 
 })
 
@@ -271,7 +316,8 @@ initial_properties = {
 	is_visible=false,
 	visual = "mesh",
 	mesh = "sail01.obj",
-	textures = {"sail.png"},
+	textures = {"sail.png^[multiply:#FFEBCC"},
+--	textures = {"sail.png^[colorize:#FFE1B2:alpha"},
 	backface_culling = false,
 	},
 	
