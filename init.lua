@@ -249,7 +249,7 @@ local paint_sail=function(self,puncher,ttime, toolcaps, dir, damage)
 					puncher:set_wielded_item(itmstck)
 				end
 			else -- deal damage
-				if toolcaps and toolcaps.damage_groups and toolcaps.damage_groups.fleshy then
+				if not self.driver and toolcaps and toolcaps.damage_groups and toolcaps.damage_groups.fleshy then
 					mobkit.hurt(self,toolcaps.damage_groups.fleshy - 1)
 					mobkit.make_sound(self,'hit')
 				end
