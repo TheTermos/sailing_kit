@@ -66,7 +66,27 @@ local boat_activation = function(self,std)
 	self.sail_timer = minetest.get_us_time()
 end
 
+local destroy=function(self)
+	local pos = self.object:get_pos()
+	if self.mast then self.mast:remove() end
+	if self.sail then self.sail:remove() end
+	if self.rudder then self.rudder:remove() end
+	self.object:remove()
+	pos.y=pos.y+2
+	for i=1,3 do
+		minetest.add_item({x=pos.x+random()-0.5,y=pos.y,z=pos.z+random()-0.5},'default:wood')
+	end	
+	for i=1,9 do
+		minetest.add_item({x=pos.x+random()-0.5,y=pos.y,z=pos.z+random()-0.5},'farming:string')
+	end	
+end
+
 local sailstep = function(self)
+	if self.hp <= 0 then 
+		destroy(self) 
+		return
+	end
+	
 	local dtime = max(self.dtime,0.1)
 	local accel_y = self.object:get_acceleration().y
 	if self.mast then
@@ -212,7 +232,7 @@ white='#FFFFFF',
 yellow='#FFFF80',
 }
 
-local paint_sail=function(self,puncher)
+local paint_sail=function(self,puncher,ttime, toolcaps, dir, damage)
 	if puncher:is_player() then
 		local itmstck=puncher:get_wielded_item()
 		if itmstck then
@@ -227,6 +247,11 @@ local paint_sail=function(self,puncher)
 					mobkit.remember(self,'sailcolor',colstr)
 					itmstck:set_count(itmstck:get_count()-1)
 					puncher:set_wielded_item(itmstck)
+				end
+			else -- deal damage
+				if toolcaps and toolcaps.damage_groups and toolcaps.damage_groups.fleshy then
+					mobkit.hurt(self,toolcaps.damage_groups.fleshy - 1)
+					mobkit.make_sound(self,'hit')
 				end
 			end	
 		end
@@ -251,6 +276,9 @@ minetest.register_entity('sailing_kit:boat',{
 	
 	water_drag = 0,		-- handled by object's own logic.
 	buoyancy = 0.45,
+	sounds={
+		hit = 'default_dig_choppy'
+		},
 
 on_rightclick=function(self, clicker)
 	if clicker:get_attach() == nil then
