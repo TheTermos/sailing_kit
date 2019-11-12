@@ -300,7 +300,7 @@ on_rightclick=function(self, clicker)
 end,
 
 on_step = mobkit.stepfunc,
-brainfunc = sailstep,
+logic = sailstep,
 
 on_activate=function(self,std)
 	mobkit.actfunc(self,std)
