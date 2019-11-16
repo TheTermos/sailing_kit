@@ -15,7 +15,7 @@ minetest.register_craftitem("sailing_kit:boat", {
 		local node = mobkit.nodeatpos(ppos)
 		if node and node.drawtype=='liquid' then	
 			ppos.y=ppos.y+0.2
-			boat = minetest.add_entity(ppos, "sailing_kit:boat")
+			local boat = minetest.add_entity(ppos, "sailing_kit:boat")
 			if boat and placer then
 				boat:set_yaw(placer:get_look_horizontal())
 				itemstack:take_item()
