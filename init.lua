@@ -13,10 +13,10 @@ local rad=math.rad
 local vct = vector
 
 -- constants
-local SAIL_ROT_RATE = 2	
+local SAIL_ROT_RATE = 4	
 local WIND_FACTOR = 0.05
 local RUDDER_LIMIT = 30	-- degrees
-local RUDDER_TURN_RATE = rad(10)
+local RUDDER_TURN_RATE = rad(12)
 local LONGIT_DRAG_FACTOR = 0.13*0.13
 local LATER_DRAG_FACTOR = 2.0
 local ROLL_RATE = rad(2)
@@ -121,10 +121,10 @@ local sailstep = function(self)
 				-- sail
 				if self.sail_set then
 					if ctrl.up then
-						self.sheet_limit = min(self.sheet_limit+7*self.dtime,90)
+						self.sheet_limit = min(self.sheet_limit+15*self.dtime,90)
 					elseif ctrl.down then
 --						self.sheet_limit = max(self.sheet_limit-7*dtime,0)
-						self.sheet_limit = max(abs(sailrot.y)-7*self.dtime,0)
+						self.sheet_limit = max(abs(sailrot.y)-15*self.dtime,0)
 					end
 				else	-- paddle
 					local paddleacc
@@ -163,7 +163,7 @@ local sailstep = function(self)
 		if abs(self.rudder_angle)>5 then 
 --			newyaw = yaw+dtime*RUDDER_TURN_RATE*longit_speed*self.rudder_angle/30 
 --			newyaw = yaw+dtime*(1-1/(longit_speed*0.5+1))*self.rudder_angle/30*RUDDER_TURN_RATE
-			newyaw = yaw+self.dtime*(1-1/(abs(longit_speed)*1.5+1))*self.rudder_angle/30*RUDDER_TURN_RATE*sign(longit_speed)
+			newyaw = yaw+self.dtime*(1-1/(abs(longit_speed)+1))*self.rudder_angle/30*RUDDER_TURN_RATE*sign(longit_speed)
 		end
 		
 		if self.sail_set then
@@ -285,7 +285,7 @@ on_rightclick=function(self, clicker)
 	if clicker:get_attach() == nil then
 --		clicker:set_attach(self.object,'',{x=20,y=3,z=0},{x=0,y=0,z=0})
 		clicker:set_attach(self.object,'',{x=-3,y=2,z=-21},{x=0,y=0,z=0})
-		clicker:set_eye_offset({x=0,y=0,z=-20},{x=0,y=0,z=-20})
+		clicker:set_eye_offset({x=0,y=0,z=-20},{x=0,y=0,z=-5})
 		player_api.player_attached[clicker:get_player_name()] = true
 		minetest.after(0.2, function()
 			player_api.set_animation(clicker, "sit" , 30)
