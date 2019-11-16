@@ -13,10 +13,10 @@ local rad=math.rad
 local vct = vector
 
 -- constants
-local SAIL_ROT_RATE = 2	
+local SAIL_ROT_RATE = 4	
 local WIND_FACTOR = 0.05
 local RUDDER_LIMIT = 30	-- degrees
-local RUDDER_TURN_RATE = rad(5)
+local RUDDER_TURN_RATE = rad(12)
 local LONGIT_DRAG_FACTOR = 0.13*0.13
 local LATER_DRAG_FACTOR = 2.0
 local ROLL_RATE = rad(2)
@@ -87,7 +87,7 @@ local sailstep = function(self)
 		return
 	end
 	
-	local dtime = max(self.dtime,0.1)
+--	local dtime = min(self.dtime,0.5)
 	local accel_y = self.object:get_acceleration().y
 	if self.mast then
 		local wind = get_wind()
@@ -115,16 +115,16 @@ local sailstep = function(self)
 		
 		-- player control
 		if self.driver then
-			plyr = minetest.get_player_by_name(self.driver)
+			local plyr = minetest.get_player_by_name(self.driver)
 			if plyr then			
 				local ctrl = plyr:get_player_control()
 				-- sail
 				if self.sail_set then
 					if ctrl.up then
-						self.sheet_limit = min(self.sheet_limit+7*dtime,90)
+						self.sheet_limit = min(self.sheet_limit+15*self.dtime,90)
 					elseif ctrl.down then
 --						self.sheet_limit = max(self.sheet_limit-7*dtime,0)
-						self.sheet_limit = max(abs(sailrot.y)-7*dtime,0)
+						self.sheet_limit = max(abs(sailrot.y)-15*self.dtime,0)
 					end
 				else	-- paddle
 					local paddleacc
@@ -148,9 +148,9 @@ local sailstep = function(self)
 				end
 				-- rudder
 				if ctrl.right then
-					rudder_angle = max(self.rudder_angle-20*dtime,-RUDDER_LIMIT)
+					rudder_angle = max(self.rudder_angle-20*self.dtime,-RUDDER_LIMIT)
 				elseif ctrl.left then
-					rudder_angle = min(self.rudder_angle+20*dtime,RUDDER_LIMIT)
+					rudder_angle = min(self.rudder_angle+20*self.dtime,RUDDER_LIMIT)
 				end	
 			end
 		end
@@ -162,7 +162,8 @@ local sailstep = function(self)
 		end
 		if abs(self.rudder_angle)>5 then 
 --			newyaw = yaw+dtime*RUDDER_TURN_RATE*longit_speed*self.rudder_angle/30 
-			newyaw = yaw+dtime*(1-1/(longit_speed*0.5+1))*self.rudder_angle/30*RUDDER_TURN_RATE
+--			newyaw = yaw+dtime*(1-1/(longit_speed*0.5+1))*self.rudder_angle/30*RUDDER_TURN_RATE
+			newyaw = yaw+self.dtime*(1-1/(abs(longit_speed)+1))*self.rudder_angle/30*RUDDER_TURN_RATE*sign(longit_speed)
 		end
 		
 		if self.sail_set then
@@ -172,11 +173,11 @@ local sailstep = function(self)
 			local sdir = minetest.yaw_to_dir(syaw)
 			local snormal = {x=sdir.z,y=0,z=-sdir.x}	-- rightside, dot is negative
 			-- wind force on sail
-			wsforce =  dot(wind,snormal)
+			local wsforce =  dot(wind,snormal)
 			
 			-- turn sail
 			local tight = false
-			newsailrot = sailrot.y - wsforce*SAIL_ROT_RATE*dtime
+			local newsailrot = sailrot.y - wsforce*SAIL_ROT_RATE*self.dtime
 			if abs(newsailrot) >= self.sheet_limit then			-- it is tight
 				newsailrot = self.sheet_limit * sign(newsailrot)
 				tight = true
@@ -184,7 +185,7 @@ local sailstep = function(self)
 			self.mast:set_attach(self.object,'',spos,{x=0,y=newsailrot,z=0})
 			
 			if tight then	-- sail exerts force on the hull
-				forcevec = vct.multiply(snormal,wsforce*wsforce*WIND_FACTOR*sign(wsforce))
+				local forcevec = vct.multiply(snormal,wsforce*wsforce*WIND_FACTOR*sign(wsforce))
 				accel=vct.add(accel,forcevec)
 				
 						-- lateral pressure
@@ -206,7 +207,7 @@ local sailstep = function(self)
 			self.object:set_acceleration(accel)
 		end
 		
-		if abs(newroll-roll)>ROLL_RATE*dtime then newroll=roll+ROLL_RATE*dtime*sign(newroll-roll) end
+		if abs(newroll-roll)>ROLL_RATE*self.dtime then newroll=roll+ROLL_RATE*self.dtime*sign(newroll-roll) end
 		if newroll~=roll or newyaw~=yaw or newpitch~=pitch then self.object:set_rotation({x=newpitch,y=newyaw,z=newroll}) end
 		
 		-- workaround for broken attachments
@@ -284,7 +285,7 @@ on_rightclick=function(self, clicker)
 	if clicker:get_attach() == nil then
 --		clicker:set_attach(self.object,'',{x=20,y=3,z=0},{x=0,y=0,z=0})
 		clicker:set_attach(self.object,'',{x=-3,y=2,z=-21},{x=0,y=0,z=0})
-		clicker:set_eye_offset({x=0,y=0,z=-20},{x=0,y=0,z=-20})
+		clicker:set_eye_offset({x=0,y=0,z=-20},{x=0,y=0,z=-5})
 		player_api.player_attached[clicker:get_player_name()] = true
 		minetest.after(0.2, function()
 			player_api.set_animation(clicker, "sit" , 30)
@@ -300,7 +301,7 @@ on_rightclick=function(self, clicker)
 end,
 
 on_step = mobkit.stepfunc,
-brainfunc = sailstep,
+logic = sailstep,
 
 on_activate=function(self,std)
 	mobkit.actfunc(self,std)
