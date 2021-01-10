@@ -89,7 +89,10 @@ local sailstep = function(self)
 	
 --	local dtime = min(self.dtime,0.5)
 	local accel_y = self.object:get_acceleration().y
-	if self.mast then
+	if not self.mast then return end
+	local _,_,spos,sailrot = self.mast:get_attach()
+	
+	if sailrot then
 		local wind = get_wind()
 		local vel = self.object:get_velocity()
 		wind = {x=wind.x - vel.x,y=0,z=wind.z-vel.z}
@@ -111,7 +114,7 @@ local sailstep = function(self)
 		local accel = vct.add(longit_drag,later_drag)
 		local rudder_angle = self.rudder_angle
 		
-		local _,_,spos,sailrot = self.mast:get_attach()
+--		local _,_,spos,sailrot = self.mast:get_attach()
 		
 		-- player control
 		if self.driver then
